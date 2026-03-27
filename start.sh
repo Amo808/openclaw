@@ -5,7 +5,7 @@
 export HOME="/data"
 export OPENCLAW_STATE_DIR="/data/.openclaw"
 export OPENCLAW_WORKSPACE_DIR="/data/workspace"
-mkdir -p "$OPENCLAW_STATE_DIR" "$OPENCLAW_WORKSPACE_DIR"
+mkdir -p "$OPENCLAW_STATE_DIR" "$OPENCLAW_WORKSPACE_DIR" 2>/dev/null || true
 
 # Install kimi-claw plugin if bot-token is set and plugin not yet installed
 if [ -n "$KIMI_BOT_TOKEN" ]; then
@@ -22,48 +22,87 @@ if [ -n "$KIMI_BOT_TOKEN" ]; then
   fi
 fi
 
-echo "[start] Starting OpenClaw gateway..."
-
 # Write Moonshot API key to .env so OpenClaw picks it up
 if [ -n "$MOONSHOT_API_KEY" ]; then
   sed -i '/^MOONSHOT_API_KEY=/d' "$OPENCLAW_STATE_DIR/.env" 2>/dev/null || true
   echo "MOONSHOT_API_KEY=$MOONSHOT_API_KEY" >> "$OPENCLAW_STATE_DIR/.env"
 fi
 
-# Configure Moonshot provider with baseUrl and models
-openclaw config set models.mode "merge" 2>/dev/null || true
-openclaw config set models.providers.moonshot --json '{
-  "baseUrl": "https://api.moonshot.ai/v1",
-  "apiKey": "${MOONSHOT_API_KEY}",
-  "api": "openai-completions",
-  "models": [
-    {"id": "kimi-k2-thinking", "name": "Kimi K2 Thinking", "reasoning": true, "input": ["text"], "contextWindow": 256000, "maxTokens": 8192},
-    {"id": "kimi-k2.5", "name": "Kimi K2.5", "reasoning": false, "input": ["text"], "contextWindow": 256000, "maxTokens": 8192}
-  ]
-}' 2>/dev/null || true
+# ── Write entire config as JSON in one shot (avoids 11 slow `openclaw config set` calls) ──
+CONFIG_FILE="$OPENCLAW_STATE_DIR/openclaw.json"
+echo "[start] Writing config to $CONFIG_FILE..."
 
-# NOTE: default model is set AFTER plugins are enabled (see below)
+# Read existing config or start fresh
+if [ -f "$CONFIG_FILE" ]; then
+  EXISTING=$(cat "$CONFIG_FILE")
+else
+  EXISTING="{}"
+fi
 
-# Allow Control UI on non-loopback bind
-openclaw config set gateway.controlUi.dangerouslyAllowHostHeaderOriginFallback --json true 2>/dev/null || true
+# Merge our settings into existing config using node (available in image)
+node -e '
+const fs = require("fs");
+let cfg = {};
+try { cfg = JSON.parse(process.argv[1]); } catch {}
 
-# Skip device pairing for Control UI (headless deploy)
-openclaw config set gateway.controlUi.dangerouslyDisableDeviceAuth --json true 2>/dev/null || true
+// Deep merge helper
+function deep(target, source) {
+  for (const key of Object.keys(source)) {
+    if (source[key] && typeof source[key] === "object" && !Array.isArray(source[key])) {
+      if (!target[key] || typeof target[key] !== "object") target[key] = {};
+      deep(target[key], source[key]);
+    } else {
+      target[key] = source[key];
+    }
+  }
+  return target;
+}
 
-# Fix: reset auth mode to token (undo previous auth.mode=none that was persisted to disk)
-openclaw config set gateway.auth.mode token 2>/dev/null || true
+const patch = {
+  models: {
+    mode: "merge",
+    providers: {
+      moonshot: {
+        baseUrl: "https://api.moonshot.ai/v1",
+        apiKey: "${MOONSHOT_API_KEY}",
+        api: "openai-completions",
+        models: [
+          {id: "kimi-k2-thinking", name: "Kimi K2 Thinking", reasoning: true, input: ["text"], contextWindow: 256000, maxTokens: 8192},
+          {id: "kimi-k2.5", name: "Kimi K2.5", reasoning: false, input: ["text"], contextWindow: 256000, maxTokens: 8192}
+        ]
+      }
+    }
+  },
+  agents: {
+    defaults: { model: { primary: "moonshot/kimi-k2-thinking" } },
+    main: { model: { primary: "moonshot/kimi-k2-thinking" } }
+  },
+  gateway: {
+    auth: { mode: "token" },
+    controlUi: {
+      dangerouslyAllowHostHeaderOriginFallback: true,
+      dangerouslyDisableDeviceAuth: true
+    }
+  },
+  skills: {
+    load: { extraDirs: ["/app/skills"] }
+  },
+  plugins: {
+    allow: ["kimi-claw"]
+  }
+};
 
-# Point skill loader to /app/skills so bundled skills (like human-analytics) are discovered
-openclaw config set skills.load.extraDirs --json '["/app/skills"]' 2>/dev/null || true
-echo "[start] Skill extra dirs set to /app/skills."
+deep(cfg, patch);
+fs.writeFileSync(process.argv[2], JSON.stringify(cfg, null, 2) + "\n");
+console.log("[start] Config written successfully.");
+' "$EXISTING" "$CONFIG_FILE"
 
-# Clean up old logs and temp files to free disk space
+# Clean up old logs to free disk space
 find /data -name "*.log" -size +5M -delete 2>/dev/null || true
 find /data -name "*.log.*" -delete 2>/dev/null || true
 find /tmp -type f -mtime +1 -delete 2>/dev/null || true
 
-# Pre-bootstrap MetaClaw venv with pip (Docker image lacks ensurepip in venvs)
-# Run in BACKGROUND so gateway starts quickly and Render sees the port
+# Pre-bootstrap MetaClaw venv with pip in BACKGROUND
 METACLAW_VENV="/app/extensions/metaclaw-openclaw/.metaclaw"
 (
   echo "[metaclaw-bg] Preparing MetaClaw Python venv..."
@@ -78,26 +117,9 @@ METACLAW_VENV="/app/extensions/metaclaw-openclaw/.metaclaw"
     "$METACLAW_VENV/bin/python" -m pip install --quiet "aiming-metaclaw[rl,evolve,scheduler]" 2>/dev/null || true
     echo "[metaclaw-bg] MetaClaw Python packages installed."
   else
-    echo "[metaclaw-bg] WARNING: pip still unavailable, MetaClaw RL features will be limited."
+    echo "[metaclaw-bg] WARNING: pip still unavailable."
   fi
 ) &
-METACLAW_PID=$!
 
-# Enable MetaClaw plugin (already bundled, no need for install -l which causes duplicate warning)
-openclaw plugins enable metaclaw-openclaw 2>/dev/null || true
-echo "[start] MetaClaw plugin enabled."
-
-# Re-enable kimi-claw plugin (may get disabled after config changes)
-openclaw plugins enable kimi-claw 2>/dev/null || true
-echo "[start] kimi-claw plugin enabled."
-
-# Trust kimi-claw to silence provenance warnings
-openclaw config set plugins.allow --json '["kimi-claw"]' 2>/dev/null || true
-
-# Set default model AFTER plugins (kimi-claw may override it)
-openclaw config set agents.defaults.model.primary "moonshot/kimi-k2-thinking" 2>/dev/null || true
-# Also set per-agent model to be sure
-openclaw config set agents.main.model.primary "moonshot/kimi-k2-thinking" 2>/dev/null || true
-echo "[start] Default model set to moonshot/kimi-k2-thinking."
-
+echo "[start] Launching gateway..."
 exec node openclaw.mjs gateway --bind lan --port 8080 --allow-unconfigured
