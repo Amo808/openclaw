@@ -135,8 +135,10 @@ patch.plugins.entries["metaclaw-openclaw"] = {
 };
 
 deep(cfg, patch);
-// Remove stale keys left by previous deploys
+// Remove stale keys left by previous deploys or kimi-claw installer
 if (cfg.agents) delete cfg.agents.main;
+// kimi-claw installer injects a telegram plugin entry with invalid schema
+if (cfg.plugins?.entries?.telegram) delete cfg.plugins.entries.telegram;
 fs.writeFileSync(process.argv[2], JSON.stringify(cfg, null, 2) + "\n");
 console.log("[start] Config written successfully.");
 ' "$EXISTING" "$CONFIG_FILE"
