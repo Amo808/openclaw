@@ -108,7 +108,7 @@ const patch = {
     load: { extraDirs: ["/app/skills"] }
   },
   plugins: {
-    allow: ["kimi-claw"]
+    allow: ["kimi-claw", "metaclaw-openclaw"]
   }
 };
 
