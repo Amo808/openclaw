@@ -210,8 +210,8 @@ echo "[start] Creating plugin runtime shim..."
 AUTH_BUNDLE=$(ls /app/dist/auth-profiles-*.js 2>/dev/null | head -1)
 if [ -n "$AUTH_BUNDLE" ]; then
   AUTH_BASE=$(basename "$AUTH_BUNDLE")
-  # Find the minified alias: "XY as createPluginRuntime" in the export line
-  ALIAS=$(grep -oP '\w+ as createPluginRuntime[^S]' "$AUTH_BUNDLE" | head -1 | awk '{print $1}')
+  # Export line in bundle: "createPluginRuntime as Zt" — extract the minified name (Zt)
+  ALIAS=$(grep -oP '\bcreatePluginRuntime\b as \w+' "$AUTH_BUNDLE" | head -1 | awk '{print $3}')
   if [ -n "$ALIAS" ]; then
     mkdir -p /app/dist/plugins/runtime
     cat > /app/dist/plugins/runtime/index.js << SHIMEOF
