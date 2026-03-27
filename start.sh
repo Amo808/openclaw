@@ -24,6 +24,15 @@ fi
 
 echo "[start] Starting OpenClaw gateway..."
 
+# Write Kimi API key to .env so OpenClaw picks it up
+if [ -n "$KIMI_API_KEY" ]; then
+  grep -q "^KIMI_API_KEY=" "$OPENCLAW_STATE_DIR/.env" 2>/dev/null || \
+    echo "KIMI_API_KEY=$KIMI_API_KEY" >> "$OPENCLAW_STATE_DIR/.env"
+fi
+
+# Set default model to kimi-coding
+openclaw config set agents.defaults.model.primary "kimi-coding/kimi-k2-thinking" 2>/dev/null || true
+
 # Allow Control UI on non-loopback bind
 openclaw config set gateway.controlUi.dangerouslyAllowHostHeaderOriginFallback --json true 2>/dev/null || true
 
