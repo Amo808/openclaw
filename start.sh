@@ -108,7 +108,7 @@ const patch = {
     load: { extraDirs: ["/app/skills"] }
   },
   plugins: {
-    allow: ["kimi-claw", "metaclaw-openclaw"]
+    allow: ["kimi-claw"]
   }
 };
 
@@ -124,15 +124,12 @@ if (process.env.KIMI_BOT_TOKEN) {
   };
 }
 
-// Point metaclaw to persistent venv on /data
-patch.plugins.entries = patch.plugins.entries || {};
-patch.plugins.entries["metaclaw-openclaw"] = {
-  enabled: true,
-  config: {
-    venvPath: "/data/metaclaw-venv",
-    autoInstallMetaclaw: false
-  }
-};
+// metaclaw-openclaw disabled — extension is uncompiled TypeScript,
+// causes "Unable to resolve plugin runtime module". Python venv is
+// still bootstrapped below for direct CLI usage.
+if (cfg.plugins?.entries?.["metaclaw-openclaw"]) {
+  delete cfg.plugins.entries["metaclaw-openclaw"];
+}
 
 deep(cfg, patch);
 // Remove stale keys left by previous deploys or kimi-claw installer
