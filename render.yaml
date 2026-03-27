@@ -4,7 +4,7 @@ services:
     runtime: docker
     plan: standard
     healthCheckPath: /health
-    dockerCommand: "node openclaw.mjs gateway --bind lan --port 8080 --allow-unconfigured"
+    dockerCommand: "bash /app/start.sh"
     envVars:
       - key: PORT
         value: "8080"
@@ -16,7 +16,7 @@ services:
         value: /data/workspace
       - key: OPENCLAW_GATEWAY_TOKEN
         generateValue: true
-      - key: KIMI_API_KEY
+      - key: KIMI_BOT_TOKEN
         sync: false
       - key: NODE_OPTIONS
         value: "--max-old-space-size=1536"
