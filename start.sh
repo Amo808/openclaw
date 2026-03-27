@@ -23,4 +23,4 @@ if [ -n "$KIMI_BOT_TOKEN" ]; then
 fi
 
 echo "[start] Starting OpenClaw gateway..."
-exec node openclaw.mjs gateway --bind lan --port 8080 --allow-unconfigured
+exec node openclaw.mjs gateway --bind lan --port 8080 --allow-unconfigured --dangerous-control-ui-allow-host-header-origin-fallback
