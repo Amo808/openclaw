@@ -30,4 +30,7 @@ openclaw config set gateway.controlUi.dangerouslyAllowHostHeaderOriginFallback -
 # Skip device pairing for Control UI (headless deploy)
 openclaw config set gateway.controlUi.dangerouslyDisableDeviceAuth --json true 2>/dev/null || true
 
+# Fix: reset auth mode to token (undo previous auth.mode=none that was persisted to disk)
+openclaw config set gateway.auth.mode token 2>/dev/null || true
+
 exec node openclaw.mjs gateway --bind lan --port 8080 --allow-unconfigured
