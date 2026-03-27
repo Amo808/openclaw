@@ -54,4 +54,9 @@ openclaw config set gateway.controlUi.dangerouslyDisableDeviceAuth --json true 2
 # Fix: reset auth mode to token (undo previous auth.mode=none that was persisted to disk)
 openclaw config set gateway.auth.mode token 2>/dev/null || true
 
+# Enable MetaClaw plugin
+openclaw plugins install -l /app/extensions/metaclaw-openclaw 2>/dev/null || true
+openclaw plugins enable metaclaw-openclaw 2>/dev/null || true
+echo "[start] MetaClaw plugin enabled."
+
 exec node openclaw.mjs gateway --bind lan --port 8080 --allow-unconfigured

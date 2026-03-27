@@ -5,6 +5,11 @@ services:
     plan: standard
     healthCheckPath: /health
     dockerCommand: "bash /app/start.sh"
+    buildArgs:
+      - key: OPENCLAW_DOCKER_APT_PACKAGES
+        value: "python3 python3-venv python3-pip"
+      - key: OPENCLAW_EXTENSIONS
+        value: "metaclaw-openclaw"
     envVars:
       - key: PORT
         value: "8080"
