@@ -5,7 +5,11 @@
 export HOME="/data"
 export OPENCLAW_STATE_DIR="/data/.openclaw"
 export OPENCLAW_WORKSPACE_DIR="/data/workspace"
-mkdir -p "$OPENCLAW_STATE_DIR" "$OPENCLAW_WORKSPACE_DIR" 2>/dev/null || true
+# Redirect /tmp usage to persistent disk to avoid Render's 2GB tmpfs limit
+export TMPDIR="/data/tmp"
+export TEMP="/data/tmp"
+export TMP="/data/tmp"
+mkdir -p "$OPENCLAW_STATE_DIR" "$OPENCLAW_WORKSPACE_DIR" "$TMPDIR" 2>/dev/null || true
 
 # Install kimi-claw plugin if bot-token is set and plugin not yet installed
 if [ -n "$KIMI_BOT_TOKEN" ]; then
@@ -104,8 +108,9 @@ console.log("[start] Config written successfully.");
 find /data -name "*.log" -delete 2>/dev/null || true
 find /data -name "*.log.*" -delete 2>/dev/null || true
 find /data/.kimi -name "*.log" -delete 2>/dev/null || true
-find /tmp -type f -mtime +1 -delete 2>/dev/null || true
-echo "[start] Disk cleanup done. Free space: $(df -h /data 2>/dev/null | tail -1 | awk '{print $4}')"
+rm -rf /tmp/openclaw 2>/dev/null || true
+rm -rf /data/tmp/* 2>/dev/null || true
+echo "[start] Disk cleanup done."
 
 # Pre-bootstrap MetaClaw venv with pip in BACKGROUND
 METACLAW_VENV="/app/extensions/metaclaw-openclaw/.metaclaw"
