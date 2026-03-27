@@ -30,6 +30,18 @@ if [ -n "$MOONSHOT_API_KEY" ]; then
   echo "MOONSHOT_API_KEY=$MOONSHOT_API_KEY" >> "$OPENCLAW_STATE_DIR/.env"
 fi
 
+# Configure Moonshot provider with baseUrl and models
+openclaw config set models.mode "merge" 2>/dev/null || true
+openclaw config set models.providers.moonshot --json '{
+  "baseUrl": "https://api.moonshot.ai/v1",
+  "apiKey": "${MOONSHOT_API_KEY}",
+  "api": "openai-completions",
+  "models": [
+    {"id": "kimi-k2-thinking", "name": "Kimi K2 Thinking", "reasoning": true, "input": ["text"], "contextWindow": 256000, "maxTokens": 8192},
+    {"id": "kimi-k2.5", "name": "Kimi K2.5", "reasoning": false, "input": ["text"], "contextWindow": 256000, "maxTokens": 8192}
+  ]
+}' 2>/dev/null || true
+
 # Set default model to moonshot
 openclaw config set agents.defaults.model.primary "moonshot/kimi-k2-thinking" 2>/dev/null || true
 
