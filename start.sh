@@ -9,7 +9,11 @@ export OPENCLAW_WORKSPACE_DIR="/data/workspace"
 export TMPDIR="/data/tmp"
 export TEMP="/data/tmp"
 export TMP="/data/tmp"
-mkdir -p "$OPENCLAW_STATE_DIR" "$OPENCLAW_WORKSPACE_DIR" "$TMPDIR" 2>/dev/null || true
+
+# Ensure all directories exist (volume may be fresh / owned by root)
+for d in "$OPENCLAW_STATE_DIR" "$OPENCLAW_WORKSPACE_DIR" "$TMPDIR" "/data/metaclaw-venv"; do
+  mkdir -p "$d" 2>/dev/null || true
+done
 
 # ── AGGRESSIVE CLEANUP first — disk may be full ──
 echo "[start] Cleaning disk..."
@@ -40,6 +44,7 @@ fi
 
 # Write Moonshot API key to .env so OpenClaw picks it up
 if [ -n "$MOONSHOT_API_KEY" ]; then
+  touch "$OPENCLAW_STATE_DIR/.env" 2>/dev/null || true
   sed -i '/^MOONSHOT_API_KEY=/d' "$OPENCLAW_STATE_DIR/.env" 2>/dev/null || true
   echo "MOONSHOT_API_KEY=$MOONSHOT_API_KEY" >> "$OPENCLAW_STATE_DIR/.env"
 fi
