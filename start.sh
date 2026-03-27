@@ -92,6 +92,8 @@ const patch = {
 };
 
 deep(cfg, patch);
+// Remove invalid keys left by previous deploys
+if (cfg.agents) delete cfg.agents.main;
 fs.writeFileSync(process.argv[2], JSON.stringify(cfg, null, 2) + "\n");
 console.log("[start] Config written successfully.");
 ' "$EXISTING" "$CONFIG_FILE"
