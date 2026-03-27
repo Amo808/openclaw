@@ -74,8 +74,7 @@ const patch = {
     }
   },
   agents: {
-    defaults: { model: { primary: "moonshot/kimi-k2-thinking" } },
-    main: { model: { primary: "moonshot/kimi-k2-thinking" } }
+    defaults: { model: { primary: "moonshot/kimi-k2-thinking" } }
   },
   gateway: {
     auth: { mode: "token" },
