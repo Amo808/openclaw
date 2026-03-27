@@ -7,7 +7,7 @@ services:
     dockerCommand: "bash /app/start.sh"
     buildArgs:
       - key: OPENCLAW_DOCKER_APT_PACKAGES
-        value: "python3 python3-venv python3-pip"
+        value: "python3-full python3-venv python3-pip"
       - key: OPENCLAW_EXTENSIONS
         value: "metaclaw-openclaw"
     envVars:
