@@ -202,5 +202,28 @@ METACLAW_VENV="/data/metaclaw-venv"
   fi
 ) &
 
+# ── Create plugin runtime shim ──
+# The Docker build bundles src/plugins/runtime/index.ts into auth-profiles-*.js
+# but the plugin loader expects a standalone file at dist/plugins/runtime/index.js.
+# Create a thin ES module shim that re-exports createPluginRuntime from the bundle.
+echo "[start] Creating plugin runtime shim..."
+AUTH_BUNDLE=$(ls /app/dist/auth-profiles-*.js 2>/dev/null | head -1)
+if [ -n "$AUTH_BUNDLE" ]; then
+  AUTH_BASE=$(basename "$AUTH_BUNDLE")
+  # Find the minified alias: "XY as createPluginRuntime" in the export line
+  ALIAS=$(grep -oP '\w+ as createPluginRuntime[^S]' "$AUTH_BUNDLE" | head -1 | awk '{print $1}')
+  if [ -n "$ALIAS" ]; then
+    mkdir -p /app/dist/plugins/runtime
+    cat > /app/dist/plugins/runtime/index.js << SHIMEOF
+export { ${ALIAS} as createPluginRuntime } from "../../${AUTH_BASE}";
+SHIMEOF
+    echo "[start] Plugin runtime shim created (alias=${ALIAS}, bundle=${AUTH_BASE})."
+  else
+    echo "[start] WARNING: Could not find createPluginRuntime export in ${AUTH_BASE}"
+  fi
+else
+  echo "[start] WARNING: No auth-profiles bundle found in /app/dist/"
+fi
+
 echo "[start] Launching gateway..."
 exec node openclaw.mjs gateway --bind lan --port 8080 --allow-unconfigured
