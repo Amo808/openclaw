@@ -54,6 +54,24 @@ openclaw config set gateway.controlUi.dangerouslyDisableDeviceAuth --json true 2
 # Fix: reset auth mode to token (undo previous auth.mode=none that was persisted to disk)
 openclaw config set gateway.auth.mode token 2>/dev/null || true
 
+# Pre-bootstrap MetaClaw venv with pip (Docker image lacks ensurepip in venvs)
+METACLAW_VENV="/app/extensions/metaclaw-openclaw/.metaclaw"
+echo "[start] Preparing MetaClaw Python venv..."
+if [ ! -f "$METACLAW_VENV/bin/python" ]; then
+  python3 -m venv "$METACLAW_VENV" 2>/dev/null || true
+fi
+if ! "$METACLAW_VENV/bin/python" -c "import pip" 2>/dev/null; then
+  echo "[start] pip missing in venv, bootstrapping via get-pip.py..."
+  curl -fsSL https://bootstrap.pypa.io/get-pip.py | "$METACLAW_VENV/bin/python" 2>/dev/null || true
+fi
+# Pre-install metaclaw so the plugin doesn't need to
+if "$METACLAW_VENV/bin/python" -c "import pip" 2>/dev/null; then
+  "$METACLAW_VENV/bin/python" -m pip install --quiet "aiming-metaclaw[rl,evolve,scheduler]" 2>/dev/null || true
+  echo "[start] MetaClaw Python packages installed."
+else
+  echo "[start] WARNING: pip still unavailable, MetaClaw RL features will be limited."
+fi
+
 # Enable MetaClaw plugin
 openclaw plugins install -l /app/extensions/metaclaw-openclaw 2>/dev/null || true
 openclaw plugins enable metaclaw-openclaw 2>/dev/null || true
