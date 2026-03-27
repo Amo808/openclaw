@@ -119,16 +119,19 @@ if (process.env.KIMI_BOT_TOKEN) {
   };
 }
 
+// Point metaclaw to persistent venv on /data
+patch.plugins.entries = patch.plugins.entries || {};
+patch.plugins.entries["metaclaw-openclaw"] = {
+  enabled: true,
+  config: {
+    venvPath: "/data/metaclaw-venv",
+    autoInstallMetaclaw: false
+  }
+};
+
 deep(cfg, patch);
 // Remove stale keys left by previous deploys
 if (cfg.agents) delete cfg.agents.main;
-// Remove only metaclaw plugin entry (it is bundled — duplicate causes warning spam)
-// Keep kimi-claw entry — it stores bot token config!
-if (cfg.plugins && cfg.plugins.entries) {
-  for (const key of Object.keys(cfg.plugins.entries)) {
-    if (key === "metaclaw-openclaw") delete cfg.plugins.entries[key];
-  }
-}
 fs.writeFileSync(process.argv[2], JSON.stringify(cfg, null, 2) + "\n");
 console.log("[start] Config written successfully.");
 ' "$EXISTING" "$CONFIG_FILE"
@@ -136,19 +139,34 @@ console.log("[start] Config written successfully.");
 # (cleanup moved to top of script)
 
 # Pre-bootstrap MetaClaw venv with pip in BACKGROUND (disk: 10GB)
-METACLAW_VENV="/app/extensions/metaclaw-openclaw/.metaclaw"
+# Use persistent disk so venv survives redeploys
+METACLAW_VENV="/data/metaclaw-venv"
 (
-  echo "[metaclaw-bg] Preparing MetaClaw Python venv..."
+  echo "[metaclaw-bg] Preparing MetaClaw Python venv at $METACLAW_VENV..."
+  
+  # Check if metaclaw is already installed from a previous deploy
+  if "$METACLAW_VENV/bin/python" -c "import metaclaw" 2>/dev/null; then
+    echo "[metaclaw-bg] MetaClaw already installed, skipping."
+    exit 0
+  fi
+
   if [ ! -f "$METACLAW_VENV/bin/python" ]; then
-    python3 -m venv "$METACLAW_VENV" 2>/dev/null || true
+    python3 -m venv "$METACLAW_VENV" 2>&1 || true
   fi
   if ! "$METACLAW_VENV/bin/python" -c "import pip" 2>/dev/null; then
     echo "[metaclaw-bg] pip missing in venv, bootstrapping via get-pip.py..."
-    curl -fsSL https://bootstrap.pypa.io/get-pip.py | "$METACLAW_VENV/bin/python" 2>/dev/null || true
+    curl -fsSL https://bootstrap.pypa.io/get-pip.py | "$METACLAW_VENV/bin/python" 2>&1 || true
   fi
   if "$METACLAW_VENV/bin/python" -c "import pip" 2>/dev/null; then
-    "$METACLAW_VENV/bin/python" -m pip install --quiet "aiming-metaclaw[rl,evolve,scheduler]" 2>/dev/null || true
-    echo "[metaclaw-bg] MetaClaw Python packages installed."
+    echo "[metaclaw-bg] Installing aiming-metaclaw (this may take a few minutes)..."
+    "$METACLAW_VENV/bin/python" -m pip install "aiming-metaclaw[rl,evolve,scheduler]" 2>&1 || true
+    echo "[metaclaw-bg] pip install finished."
+    # Verify
+    if "$METACLAW_VENV/bin/python" -c "import metaclaw; print('MetaClaw version:', metaclaw.__version__)" 2>&1; then
+      echo "[metaclaw-bg] ✅ MetaClaw Python packages installed and verified!"
+    else
+      echo "[metaclaw-bg] ⚠️ pip install ran but import metaclaw failed."
+    fi
   else
     echo "[metaclaw-bg] WARNING: pip still unavailable."
   fi
