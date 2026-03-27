@@ -59,4 +59,8 @@ openclaw plugins install -l /app/extensions/metaclaw-openclaw 2>/dev/null || tru
 openclaw plugins enable metaclaw-openclaw 2>/dev/null || true
 echo "[start] MetaClaw plugin enabled."
 
+# Re-enable kimi-claw plugin (may get disabled after config changes)
+openclaw plugins enable kimi-claw 2>/dev/null || true
+echo "[start] kimi-claw plugin enabled."
+
 exec node openclaw.mjs gateway --bind lan --port 8080 --allow-unconfigured
