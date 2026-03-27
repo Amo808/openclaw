@@ -1,0 +1,53 @@
+{
+  "id": "metaclaw-openclaw",
+  "version": "0.4.0",
+  "name": "MetaClaw for OpenClaw",
+  "description": "MetaClaw session/turn headers; auto-creates a Python venv for isolated MetaClaw installation — run metaclaw setup/start yourself (oneClickMetaclaw for full auto).",
+  "configSchema": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "sessionIdHeader": { "type": "string" },
+      "turnTypeHeader": { "type": "string" },
+      "oneClickMetaclaw": {
+        "type": "boolean",
+        "description": "Default false: venv + pip install only. Set true for venv + pip + default config file + metaclaw start on gateway load."
+      },
+      "autoInstallMetaclaw": {
+        "type": "boolean",
+        "description": "Create venv and run pip on plugin load. Default true when oneClickMetaclaw is false."
+      },
+      "pipPython": {
+        "type": "string",
+        "description": "System Python used to create the venv (e.g. python3, python3.12). Not used after venv is created."
+      },
+      "pipInstallSpec": { "type": "string" },
+      "pipExtraArgs": {
+        "type": "array",
+        "items": { "type": "string" },
+        "description": "Additional pip install flags."
+      },
+      "autoStartMetaclaw": {
+        "type": "boolean",
+        "description": "Spawn metaclaw after pip using venv Python. Default false; true when oneClickMetaclaw is true."
+      },
+      "bootstrapMetaclawConfig": {
+        "type": "boolean",
+        "description": "If ~/.metaclaw/config.yaml is missing, write MetaClaw defaults (non-interactive). Default false; true when oneClickMetaclaw is true."
+      },
+      "metaclawCommand": {
+        "type": "string",
+        "description": "Default: venv Python. Override with a metaclaw binary path if needed."
+      },
+      "metaclawStartArgs": {
+        "type": "array",
+        "items": { "type": "string" },
+        "description": "Default: [-m, metaclaw, start] when using venv Python; [start] when metaclawCommand is set."
+      },
+      "venvPath": {
+        "type": "string",
+        "description": "Path to the venv directory. Default: .metaclaw inside the plugin directory."
+      }
+    }
+  }
+}

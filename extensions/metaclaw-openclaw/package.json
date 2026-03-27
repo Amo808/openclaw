@@ -1,0 +1,15 @@
+{
+  "name": "@metaclaw/metaclaw-openclaw",
+  "version": "0.4.0",
+  "private": true,
+  "description": "MetaClaw for OpenClaw: session/turn headers; default pip install only — manual metaclaw setup/start (oneClickMetaclaw for full auto).",
+  "type": "module",
+  "peerDependencies": {
+    "openclaw": "*"
+  },
+  "openclaw": {
+    "extensions": [
+      "./index.ts"
+    ]
+  }
+}
