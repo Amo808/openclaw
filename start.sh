@@ -53,23 +53,37 @@ openclaw config set gateway.controlUi.dangerouslyDisableDeviceAuth --json true 2
 # Fix: reset auth mode to token (undo previous auth.mode=none that was persisted to disk)
 openclaw config set gateway.auth.mode token 2>/dev/null || true
 
+# Point skill loader to /app/skills so bundled skills (like human-analytics) are discovered
+openclaw config set skills.load.extraDirs --json '["/app/skills"]' 2>/dev/null || true
+echo "[start] Skill extra dirs set to /app/skills."
+
+# Also copy skills to workspace for immediate availability
+mkdir -p "$OPENCLAW_WORKSPACE_DIR/skills"
+if [ -d "/app/skills/human-analytics" ]; then
+  cp -r /app/skills/human-analytics "$OPENCLAW_WORKSPACE_DIR/skills/" 2>/dev/null || true
+  echo "[start] human-analytics skill copied to workspace."
+fi
+
 # Pre-bootstrap MetaClaw venv with pip (Docker image lacks ensurepip in venvs)
+# Run in BACKGROUND so gateway starts quickly and Render sees the port
 METACLAW_VENV="/app/extensions/metaclaw-openclaw/.metaclaw"
-echo "[start] Preparing MetaClaw Python venv..."
-if [ ! -f "$METACLAW_VENV/bin/python" ]; then
-  python3 -m venv "$METACLAW_VENV" 2>/dev/null || true
-fi
-if ! "$METACLAW_VENV/bin/python" -c "import pip" 2>/dev/null; then
-  echo "[start] pip missing in venv, bootstrapping via get-pip.py..."
-  curl -fsSL https://bootstrap.pypa.io/get-pip.py | "$METACLAW_VENV/bin/python" 2>/dev/null || true
-fi
-# Pre-install metaclaw so the plugin doesn't need to
-if "$METACLAW_VENV/bin/python" -c "import pip" 2>/dev/null; then
-  "$METACLAW_VENV/bin/python" -m pip install --quiet "aiming-metaclaw[rl,evolve,scheduler]" 2>/dev/null || true
-  echo "[start] MetaClaw Python packages installed."
-else
-  echo "[start] WARNING: pip still unavailable, MetaClaw RL features will be limited."
-fi
+(
+  echo "[metaclaw-bg] Preparing MetaClaw Python venv..."
+  if [ ! -f "$METACLAW_VENV/bin/python" ]; then
+    python3 -m venv "$METACLAW_VENV" 2>/dev/null || true
+  fi
+  if ! "$METACLAW_VENV/bin/python" -c "import pip" 2>/dev/null; then
+    echo "[metaclaw-bg] pip missing in venv, bootstrapping via get-pip.py..."
+    curl -fsSL https://bootstrap.pypa.io/get-pip.py | "$METACLAW_VENV/bin/python" 2>/dev/null || true
+  fi
+  if "$METACLAW_VENV/bin/python" -c "import pip" 2>/dev/null; then
+    "$METACLAW_VENV/bin/python" -m pip install --quiet "aiming-metaclaw[rl,evolve,scheduler]" 2>/dev/null || true
+    echo "[metaclaw-bg] MetaClaw Python packages installed."
+  else
+    echo "[metaclaw-bg] WARNING: pip still unavailable, MetaClaw RL features will be limited."
+  fi
+) &
+METACLAW_PID=$!
 
 # Enable MetaClaw plugin
 openclaw plugins install -l /app/extensions/metaclaw-openclaw 2>/dev/null || true
