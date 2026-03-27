@@ -23,4 +23,8 @@ if [ -n "$KIMI_BOT_TOKEN" ]; then
 fi
 
 echo "[start] Starting OpenClaw gateway..."
-exec node openclaw.mjs gateway --bind lan --port 8080 --allow-unconfigured --dangerous-control-ui-allow-host-header-origin-fallback
+
+# Allow Control UI on non-loopback bind
+openclaw config set gateway.controlUi.dangerouslyAllowHostHeaderOriginFallback --json true 2>/dev/null || true
+
+exec node openclaw.mjs gateway --bind lan --port 8080 --allow-unconfigured
