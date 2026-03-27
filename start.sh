@@ -1,5 +1,5 @@
 #!/bin/bash
-set -e
+# NOTE: no set -e — non-critical failures (disk full, pip) must not kill the gateway
 
 # Configure OpenClaw directories
 export HOME="/data"
@@ -57,12 +57,10 @@ openclaw config set gateway.auth.mode token 2>/dev/null || true
 openclaw config set skills.load.extraDirs --json '["/app/skills"]' 2>/dev/null || true
 echo "[start] Skill extra dirs set to /app/skills."
 
-# Also copy skills to workspace for immediate availability
-mkdir -p "$OPENCLAW_WORKSPACE_DIR/skills"
-if [ -d "/app/skills/human-analytics" ]; then
-  cp -r /app/skills/human-analytics "$OPENCLAW_WORKSPACE_DIR/skills/" 2>/dev/null || true
-  echo "[start] human-analytics skill copied to workspace."
-fi
+# Clean up old logs and temp files to free disk space
+find /data -name "*.log" -size +5M -delete 2>/dev/null || true
+find /data -name "*.log.*" -delete 2>/dev/null || true
+find /tmp -type f -mtime +1 -delete 2>/dev/null || true
 
 # Pre-bootstrap MetaClaw venv with pip (Docker image lacks ensurepip in venvs)
 # Run in BACKGROUND so gateway starts quickly and Render sees the port
@@ -85,8 +83,7 @@ METACLAW_VENV="/app/extensions/metaclaw-openclaw/.metaclaw"
 ) &
 METACLAW_PID=$!
 
-# Enable MetaClaw plugin
-openclaw plugins install -l /app/extensions/metaclaw-openclaw 2>/dev/null || true
+# Enable MetaClaw plugin (already bundled, no need for install -l which causes duplicate warning)
 openclaw plugins enable metaclaw-openclaw 2>/dev/null || true
 echo "[start] MetaClaw plugin enabled."
 
