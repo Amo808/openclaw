@@ -19,7 +19,7 @@ services:
       - key: KIMI_API_KEY
         sync: false
       - key: NODE_OPTIONS
-        value: "--max-old-space-size=1536"
+        value: "--max-old-space-size=384"
     disk:
       name: openclaw-data
       mountPath: /data
