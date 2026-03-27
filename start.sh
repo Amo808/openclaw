@@ -99,9 +99,11 @@ console.log("[start] Config written successfully.");
 ' "$EXISTING" "$CONFIG_FILE"
 
 # Clean up old logs to free disk space
-find /data -name "*.log" -size +5M -delete 2>/dev/null || true
+find /data -name "*.log" -delete 2>/dev/null || true
 find /data -name "*.log.*" -delete 2>/dev/null || true
+find /data/.kimi -name "*.log" -delete 2>/dev/null || true
 find /tmp -type f -mtime +1 -delete 2>/dev/null || true
+echo "[start] Disk cleanup done. Free space: $(df -h /data 2>/dev/null | tail -1 | awk '{print $4}')"
 
 # Pre-bootstrap MetaClaw venv with pip in BACKGROUND
 METACLAW_VENV="/app/extensions/metaclaw-openclaw/.metaclaw"
