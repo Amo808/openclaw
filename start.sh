@@ -42,8 +42,7 @@ openclaw config set models.providers.moonshot --json '{
   ]
 }' 2>/dev/null || true
 
-# Set default model to moonshot
-openclaw config set agents.defaults.model.primary "moonshot/kimi-k2-thinking" 2>/dev/null || true
+# NOTE: default model is set AFTER plugins are enabled (see below)
 
 # Allow Control UI on non-loopback bind
 openclaw config set gateway.controlUi.dangerouslyAllowHostHeaderOriginFallback --json true 2>/dev/null || true
@@ -80,5 +79,14 @@ echo "[start] MetaClaw plugin enabled."
 # Re-enable kimi-claw plugin (may get disabled after config changes)
 openclaw plugins enable kimi-claw 2>/dev/null || true
 echo "[start] kimi-claw plugin enabled."
+
+# Trust kimi-claw to silence provenance warnings
+openclaw config set plugins.allow --json '["kimi-claw"]' 2>/dev/null || true
+
+# Set default model AFTER plugins (kimi-claw may override it)
+openclaw config set agents.defaults.model.primary "moonshot/kimi-k2-thinking" 2>/dev/null || true
+# Also set per-agent model to be sure
+openclaw config set agents.main.model.primary "moonshot/kimi-k2-thinking" 2>/dev/null || true
+echo "[start] Default model set to moonshot/kimi-k2-thinking."
 
 exec node openclaw.mjs gateway --bind lan --port 8080 --allow-unconfigured
