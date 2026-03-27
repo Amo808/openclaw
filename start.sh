@@ -110,8 +110,9 @@ const patch = {
 deep(cfg, patch);
 // Remove stale keys left by previous deploys
 if (cfg.agents) delete cfg.agents.main;
-// Remove manually-installed metaclaw entry (it is bundled — duplicate causes warning spam)
-if (cfg.plugins && cfg.plugins.entries) delete cfg.plugins.entries["metaclaw-openclaw"];
+// Remove ALL plugin entries — they were created by previous `openclaw plugins install -l`
+// which causes "duplicate plugin id" warnings for bundled plugins
+if (cfg.plugins && cfg.plugins.entries) delete cfg.plugins.entries;
 fs.writeFileSync(process.argv[2], JSON.stringify(cfg, null, 2) + "\n");
 console.log("[start] Config written successfully.");
 ' "$EXISTING" "$CONFIG_FILE"
