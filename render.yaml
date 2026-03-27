@@ -18,7 +18,7 @@ services:
         generateValue: true
       - key: KIMI_BOT_TOKEN
         sync: false
-      - key: KIMI_API_KEY
+      - key: MOONSHOT_API_KEY
         sync: false
       - key: NODE_OPTIONS
         value: "--max-old-space-size=1536"
