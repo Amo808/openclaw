@@ -27,4 +27,7 @@ echo "[start] Starting OpenClaw gateway..."
 # Allow Control UI on non-loopback bind
 openclaw config set gateway.controlUi.dangerouslyAllowHostHeaderOriginFallback --json true 2>/dev/null || true
 
+# Disable device-pairing auth (headless deploy behind Render HTTPS)
+openclaw config set gateway.auth.mode none 2>/dev/null || true
+
 exec node openclaw.mjs gateway --bind lan --port 8080 --allow-unconfigured
