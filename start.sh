@@ -107,8 +107,15 @@ const patch = {
   skills: {
     load: { extraDirs: ["/app/skills"] }
   },
+  channels: {
+    telegram: {
+      enabled: true,
+      allowFrom: ["220308429"],
+      groupPolicy: "open"
+    }
+  },
   plugins: {
-    allow: ["kimi-claw"]
+    allow: ["kimi-claw", "telegram"]
   }
 };
 
@@ -134,8 +141,16 @@ if (cfg.plugins?.entries?.["metaclaw-openclaw"]) {
 deep(cfg, patch);
 // Remove stale keys left by previous deploys or kimi-claw installer
 if (cfg.agents) delete cfg.agents.main;
-// kimi-claw installer injects a telegram plugin entry with invalid schema
-if (cfg.plugins?.entries?.telegram) delete cfg.plugins.entries.telegram;
+// Clean up stale entries from kimi-claw installer or doctor
+if (cfg.plugins?.entries?.telegram?.config) {
+  // Remove invalid telegram plugin config (schema violation), keep the entry itself
+  delete cfg.plugins.entries.telegram.config;
+}
+// Remove stale loadPaths pointing to uncompiled extensions
+if (Array.isArray(cfg.plugins?.load?.paths)) {
+  cfg.plugins.load.paths = cfg.plugins.load.paths.filter(p => !p.includes("metaclaw-openclaw"));
+  if (cfg.plugins.load.paths.length === 0) delete cfg.plugins.load;
+}
 fs.writeFileSync(process.argv[2], JSON.stringify(cfg, null, 2) + "\n");
 console.log("[start] Config written successfully.");
 ' "$EXISTING" "$CONFIG_FILE"
