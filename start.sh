@@ -107,12 +107,28 @@ const patch = {
   }
 };
 
+// Restore kimi-claw config with bot token if available
+if (process.env.KIMI_BOT_TOKEN) {
+  patch.plugins.entries = patch.plugins.entries || {};
+  patch.plugins.entries["kimi-claw"] = {
+    enabled: true,
+    config: {
+      botToken: process.env.KIMI_BOT_TOKEN,
+      log: { enabled: true }
+    }
+  };
+}
+
 deep(cfg, patch);
 // Remove stale keys left by previous deploys
 if (cfg.agents) delete cfg.agents.main;
-// Remove ALL plugin entries — they were created by previous `openclaw plugins install -l`
-// which causes "duplicate plugin id" warnings for bundled plugins
-if (cfg.plugins && cfg.plugins.entries) delete cfg.plugins.entries;
+// Remove only metaclaw plugin entry (it is bundled — duplicate causes warning spam)
+// Keep kimi-claw entry — it stores bot token config!
+if (cfg.plugins && cfg.plugins.entries) {
+  for (const key of Object.keys(cfg.plugins.entries)) {
+    if (key === "metaclaw-openclaw") delete cfg.plugins.entries[key];
+  }
+}
 fs.writeFileSync(process.argv[2], JSON.stringify(cfg, null, 2) + "\n");
 console.log("[start] Config written successfully.");
 ' "$EXISTING" "$CONFIG_FILE"
