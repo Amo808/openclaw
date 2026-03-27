@@ -11,6 +11,18 @@ export TEMP="/data/tmp"
 export TMP="/data/tmp"
 mkdir -p "$OPENCLAW_STATE_DIR" "$OPENCLAW_WORKSPACE_DIR" "$TMPDIR" 2>/dev/null || true
 
+# ── AGGRESSIVE CLEANUP first — disk may be full ──
+echo "[start] Cleaning disk..."
+rm -rf /data/.kimi/kimi-claw/log/* 2>/dev/null || true
+rm -rf /data/tmp/* 2>/dev/null || true
+rm -rf /tmp/openclaw* 2>/dev/null || true
+find /data -name "*.log" -delete 2>/dev/null || true
+find /data -name "*.log.*" -delete 2>/dev/null || true
+find /data -name "*.bak*" -delete 2>/dev/null || true
+# Clear pip cache from previous installs
+rm -rf /data/.cache/pip 2>/dev/null || true
+echo "[start] Cleanup done. Disk: $(df -h /data 2>/dev/null | tail -1 | awk '{print $4}') free"
+
 # Install kimi-claw plugin if bot-token is set and plugin not yet installed
 if [ -n "$KIMI_BOT_TOKEN" ]; then
   PLUGIN_DIR="$OPENCLAW_STATE_DIR/extensions/kimi-claw"
@@ -104,15 +116,9 @@ fs.writeFileSync(process.argv[2], JSON.stringify(cfg, null, 2) + "\n");
 console.log("[start] Config written successfully.");
 ' "$EXISTING" "$CONFIG_FILE"
 
-# Clean up old logs to free disk space
-find /data -name "*.log" -delete 2>/dev/null || true
-find /data -name "*.log.*" -delete 2>/dev/null || true
-find /data/.kimi -name "*.log" -delete 2>/dev/null || true
-rm -rf /tmp/openclaw 2>/dev/null || true
-rm -rf /data/tmp/* 2>/dev/null || true
-echo "[start] Disk cleanup done."
+# (cleanup moved to top of script)
 
-# Pre-bootstrap MetaClaw venv with pip in BACKGROUND
+# Pre-bootstrap MetaClaw venv with pip in BACKGROUND (disk: 10GB)
 METACLAW_VENV="/app/extensions/metaclaw-openclaw/.metaclaw"
 (
   echo "[metaclaw-bg] Preparing MetaClaw Python venv..."
