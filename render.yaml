@@ -2,7 +2,7 @@ services:
   - type: web
     name: openclaw
     runtime: docker
-    plan: starter
+    plan: standard
     healthCheckPath: /health
     dockerCommand: "node openclaw.mjs gateway --bind lan --port 8080 --allow-unconfigured"
     envVars:
@@ -19,7 +19,7 @@ services:
       - key: KIMI_API_KEY
         sync: false
       - key: NODE_OPTIONS
-        value: "--max-old-space-size=384"
+        value: "--max-old-space-size=1536"
     disk:
       name: openclaw-data
       mountPath: /data
