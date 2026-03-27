@@ -151,6 +151,17 @@ if (Array.isArray(cfg.plugins?.load?.paths)) {
   cfg.plugins.load.paths = cfg.plugins.load.paths.filter(p => !p.includes("metaclaw-openclaw"));
   if (cfg.plugins.load.paths.length === 0) delete cfg.plugins.load;
 }
+// Remove stale npm install records that break plugin resolution
+// (telegram and weixin were installed via npm but should use bundled versions)
+if (cfg.plugins?.installs) {
+  delete cfg.plugins.installs.telegram;
+  delete cfg.plugins.installs["openclaw-weixin"];
+  if (Object.keys(cfg.plugins.installs).length === 0) delete cfg.plugins.installs;
+}
+// Remove openclaw-weixin entry (auto-added by kimi-claw installer)
+if (cfg.plugins?.entries?.["openclaw-weixin"]) {
+  delete cfg.plugins.entries["openclaw-weixin"];
+}
 fs.writeFileSync(process.argv[2], JSON.stringify(cfg, null, 2) + "\n");
 console.log("[start] Config written successfully.");
 ' "$EXISTING" "$CONFIG_FILE"
