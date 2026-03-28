@@ -110,7 +110,7 @@ const patch = {
   channels: {
     telegram: {
       enabled: true,
-      allowFrom: ["220308429"],
+      allowFrom: ["220308429", "393388021"],
       groupPolicy: "open"
     }
   },
