@@ -63,6 +63,12 @@ if [ -n "$MOONSHOT_API_KEY" ]; then
   echo "MOONSHOT_API_KEY=$MOONSHOT_API_KEY" >> "$OPENCLAW_STATE_DIR/.env"
 fi
 
+# Write Groq API key (used for audio transcription / Whisper)
+if [ -n "$GROQ_API_KEY" ]; then
+  sed -i '/^GROQ_API_KEY=/d' "$OPENCLAW_STATE_DIR/.env" 2>/dev/null || true
+  echo "GROQ_API_KEY=$GROQ_API_KEY" >> "$OPENCLAW_STATE_DIR/.env"
+fi
+
 # ── Write entire config as JSON in one shot (avoids 11 slow `openclaw config set` calls) ──
 CONFIG_FILE="$OPENCLAW_STATE_DIR/openclaw.json"
 echo "[start] Writing config to $CONFIG_FILE..."
@@ -130,6 +136,16 @@ const patch = {
   },
   plugins: {
     allow: ["kimi-claw", "telegram", "metaclaw-openclaw"]
+  },
+  tools: {
+    media: {
+      audio: {
+        models: [
+          { provider: "groq", model: "whisper-large-v3", apiKey: process.env.GROQ_API_KEY || "" }
+        ],
+        language: "ru"
+      }
+    }
   }
 };
 

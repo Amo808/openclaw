@@ -1,0 +1,18 @@
+services:
+  openclaw:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: openclaw
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    volumes:
+      - openclaw-data:/data
+    env_file:
+      - .env
+    user: root
+    command: ["bash", "-c", "chown -R node:node /data && exec su -s /bin/bash node -c 'bash start.sh'"]
+
+volumes:
+  openclaw-data:
