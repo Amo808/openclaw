@@ -140,10 +140,10 @@ const patch = {
   tools: {
     media: {
       audio: {
+        enabled: true,
         models: [
-          { provider: "groq", model: "whisper-large-v3", apiKey: process.env.GROQ_API_KEY || "" }
-        ],
-        language: "ru"
+          { provider: "groq", model: "whisper-large-v3", language: "ru" }
+        ]
       }
     }
   }
