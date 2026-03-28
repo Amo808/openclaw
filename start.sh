@@ -240,32 +240,36 @@ fi
 # ── Fix reasoning auto-enable by kimi-bridge ──
 # kimi-bridge applies reasoning=on at startup for thinking models.
 # This causes the Telegram channel to send "Reasoning:" text to users.
-# After a short delay, reset reasoningLevel to "off" in the session store.
+# After a delay, reset reasoningLevel to "off" in the session store.
+# Note: kimi-bridge sets reasoning=on asynchronously after startup,
+# so we need a longer delay and a retry loop to catch it.
 (
-  sleep 30
-  SESSIONS_DIR="$OPENCLAW_STATE_DIR/agents/main/sessions"
-  if [ -f "$SESSIONS_DIR/sessions.json" ]; then
-    node -e '
-      const fs = require("fs");
-      const f = process.argv[1];
-      try {
-        const d = JSON.parse(fs.readFileSync(f, "utf8"));
-        let changed = false;
-        for (const k in d) {
-          if (d[k].reasoningLevel && d[k].reasoningLevel !== "off") {
-            d[k].reasoningLevel = "off";
-            changed = true;
+  for attempt in 1 2 3; do
+    sleep 60
+    SESSIONS_DIR="$OPENCLAW_STATE_DIR/agents/main/sessions"
+    if [ -f "$SESSIONS_DIR/sessions.json" ]; then
+      node -e '
+        const fs = require("fs");
+        const f = process.argv[1];
+        try {
+          const d = JSON.parse(fs.readFileSync(f, "utf8"));
+          let changed = false;
+          for (const k in d) {
+            if (d[k].reasoningLevel && d[k].reasoningLevel !== "off") {
+              d[k].reasoningLevel = "off";
+              changed = true;
+            }
           }
+          if (changed) {
+            fs.writeFileSync(f, JSON.stringify(d, null, 2));
+            console.log("[reasoning-fix] Set reasoningLevel=off in session store (attempt " + process.argv[2] + ")");
+          }
+        } catch (e) {
+          console.log("[reasoning-fix] Skip:", e.message);
         }
-        if (changed) {
-          fs.writeFileSync(f, JSON.stringify(d, null, 2));
-          console.log("[reasoning-fix] Set reasoningLevel=off in session store");
-        }
-      } catch (e) {
-        console.log("[reasoning-fix] Skip:", e.message);
-      }
-    ' "$SESSIONS_DIR/sessions.json"
-  fi
+      ' "$SESSIONS_DIR/sessions.json" "$attempt"
+    fi
+  done
 ) &
 
 echo "[start] Launching gateway..."
