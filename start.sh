@@ -40,6 +40,20 @@ if [ -n "$KIMI_BOT_TOKEN" ]; then
   else
     echo "[start] kimi-claw already installed, skipping."
   fi
+
+  # Patch kimi-claw session-behavior: change "/reasoning on" to "/reasoning off"
+  # kimi-claw auto-sends "/reasoning on" at startup for thinking models,
+  # which causes reasoning text to leak to Telegram users.
+  BEHAVIOR_JS="$PLUGIN_DIR/dist/src/channel/runtime/session-behavior.js"
+  if [ -f "$BEHAVIOR_JS" ]; then
+    if grep -q '"/reasoning on"' "$BEHAVIOR_JS"; then
+      sed -i 's|"/reasoning on"|"/reasoning off"|g' "$BEHAVIOR_JS"
+      sed -i 's|reasoning=on|reasoning=off|g' "$BEHAVIOR_JS"
+      echo "[start] Patched kimi-claw session-behavior: reasoning off"
+    else
+      echo "[start] kimi-claw session-behavior already patched or different format"
+    fi
+  fi
 fi
 
 # Write Moonshot API key to .env so OpenClaw picks it up
@@ -237,40 +251,7 @@ else
   echo "[start] WARNING: No auth-profiles bundle found in /app/dist/"
 fi
 
-# ── Fix reasoning auto-enable by kimi-bridge ──
-# kimi-bridge applies reasoning=on at startup for thinking models.
-# This causes the Telegram channel to send "Reasoning:" text to users.
-# After a delay, reset reasoningLevel to "off" in the session store.
-# Note: kimi-bridge sets reasoning=on asynchronously after startup,
-# so we need a longer delay and a retry loop to catch it.
-(
-  for attempt in 1 2 3; do
-    sleep 60
-    SESSIONS_DIR="$OPENCLAW_STATE_DIR/agents/main/sessions"
-    if [ -f "$SESSIONS_DIR/sessions.json" ]; then
-      node -e '
-        const fs = require("fs");
-        const f = process.argv[1];
-        try {
-          const d = JSON.parse(fs.readFileSync(f, "utf8"));
-          let changed = false;
-          for (const k in d) {
-            if (d[k].reasoningLevel && d[k].reasoningLevel !== "off") {
-              d[k].reasoningLevel = "off";
-              changed = true;
-            }
-          }
-          if (changed) {
-            fs.writeFileSync(f, JSON.stringify(d, null, 2));
-            console.log("[reasoning-fix] Set reasoningLevel=off in session store (attempt " + process.argv[2] + ")");
-          }
-        } catch (e) {
-          console.log("[reasoning-fix] Skip:", e.message);
-        }
-      ' "$SESSIONS_DIR/sessions.json" "$attempt"
-    fi
-  done
-) &
+# ── reasoning fix is handled above by patching session-behavior.js ──
 
 echo "[start] Launching gateway..."
 exec node openclaw.mjs gateway --bind lan --port 8080 --allow-unconfigured
