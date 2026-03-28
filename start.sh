@@ -115,7 +115,7 @@ const patch = {
     }
   },
   plugins: {
-    allow: ["kimi-claw", "telegram"]
+    allow: ["kimi-claw", "telegram", "metaclaw-openclaw"]
   }
 };
 
@@ -131,12 +131,16 @@ if (process.env.KIMI_BOT_TOKEN) {
   };
 }
 
-// metaclaw-openclaw disabled — extension is uncompiled TypeScript,
-// causes "Unable to resolve plugin runtime module". Python venv is
-// still bootstrapped below for direct CLI usage.
-if (cfg.plugins?.entries?.["metaclaw-openclaw"]) {
-  delete cfg.plugins.entries["metaclaw-openclaw"];
-}
+// Configure metaclaw-openclaw plugin with our pre-installed venv
+patch.plugins.entries = patch.plugins.entries || {};
+patch.plugins.entries["metaclaw-openclaw"] = {
+  enabled: true,
+  config: {
+    autoInstallMetaclaw: false,
+    autoStartMetaclaw: false,
+    venvPath: "/data/metaclaw-venv"
+  }
+};
 
 deep(cfg, patch);
 // Remove stale keys left by previous deploys or kimi-claw installer
@@ -146,10 +150,18 @@ if (cfg.plugins?.entries?.telegram?.config) {
   // Remove invalid telegram plugin config (schema violation), keep the entry itself
   delete cfg.plugins.entries.telegram.config;
 }
-// Remove stale loadPaths pointing to uncompiled extensions
-if (Array.isArray(cfg.plugins?.load?.paths)) {
-  cfg.plugins.load.paths = cfg.plugins.load.paths.filter(p => !p.includes("metaclaw-openclaw"));
-  if (cfg.plugins.load.paths.length === 0) delete cfg.plugins.load;
+// Ensure metaclaw-openclaw load path points to compiled dist
+if (!cfg.plugins?.load?.paths) {
+  cfg.plugins = cfg.plugins || {};
+  cfg.plugins.load = cfg.plugins.load || {};
+  cfg.plugins.load.paths = cfg.plugins.load.paths || [];
+}
+if (!cfg.plugins.load.paths.includes("/app/dist/extensions/metaclaw-openclaw")) {
+  cfg.plugins.load.paths.push("/app/dist/extensions/metaclaw-openclaw");
+}
+// Also keep telegram load path
+if (!cfg.plugins.load.paths.includes("/app/dist/extensions/telegram")) {
+  cfg.plugins.load.paths.push("/app/dist/extensions/telegram");
 }
 // Remove stale npm install records that break plugin resolution
 // (telegram and weixin were installed via npm but should use bundled versions)
